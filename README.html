@@ -1,1 +1,346 @@
-kkkk
+<!DOCTYPE html>
+<html lang="ku" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بەڕێوەبەری ئەلبومی وێنە</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #007aff; --danger-color: #ff3b30;
+            --light-color: #f7f7f7; --dark-color: #1c1c1e;
+            --border-radius: 12px; --transition: 0.3s ease;
+        }
+        body {
+            font-family: 'Vazirmatn', sans-serif;
+            background-color: var(--light-color); margin: 0;
+            padding: 20px; direction: rtl; color: var(--dark-color);
+        }
+        .container { max-width: 1200px; margin: auto; }
+        header { text-align: center; margin-bottom: 25px; }
+        header h1 { font-size: 1.8rem; margin-bottom: 5px; }
+        header p { font-size: 1rem; color: #8a8a8e; margin-top: 0; }
+
+        /* --- View Switching --- */
+        .view { display: none; }
+        .view.active { display: block; animation: fadeIn 0.5s; }
+
+        /* --- Folder View Styles --- */
+        #folder-controls { margin-bottom: 20px; text-align: center; }
+        .btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            border: none; color: white; padding: 10px 20px;
+            border-radius: 8px; font-size: 14px; cursor: pointer;
+            font-family: 'Vazirmatn', sans-serif;
+            transition: background-color var(--transition);
+        }
+        .btn svg { width: 18px; height: 18px; }
+        .btn-primary { background-color: var(--primary-color); }
+        .btn-primary:hover { background-color: #005fcc; }
+        .btn-danger { background-color: var(--danger-color); }
+        .btn-danger:hover { background-color: #c91f16; }
+
+        #folder-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 20px;
+        }
+        .folder-item {
+            background: #fff; border-radius: var(--border-radius);
+            padding: 20px; text-align: center; cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            transition: all var(--transition); position: relative;
+        }
+        .folder-item:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
+        .folder-icon { font-size: 3.5rem; color: var(--primary-color); }
+        .folder-name { font-weight: bold; margin: 10px 0 5px; word-break: break-word; }
+        .folder-count { font-size: 0.9rem; color: #8a8a8e; }
+        .delete-folder-btn {
+            position: absolute; top: 10px; left: 10px;
+            background-color: rgba(255, 59, 48, 0.8);
+            border-radius: 50%; width: 28px; height: 28px;
+            color: white; border: none; cursor: pointer;
+            display: flex; justify-content: center; align-items: center;
+            opacity: 0; transition: opacity var(--transition);
+        }
+        .folder-item:hover .delete-folder-btn { opacity: 1; }
+
+        /* --- Image View Styles --- */
+        #image-view-header {
+            display: flex; justify-content: space-between; align-items: center;
+            flex-wrap: wrap; gap: 15px; margin-bottom: 20px;
+            padding: 15px; background: #fff; border-radius: var(--border-radius);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        #current-folder-title { font-size: 1.3rem; font-weight: bold; }
+        .upload-btn-wrapper { position: relative; }
+        .upload-btn-wrapper input { position: absolute; left: 0; top: 0; opacity: 0; width:100%; height:100%; cursor:pointer; }
+        #loader {
+            display: none; width: 22px; height: 22px; border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--primary-color); border-radius: 50%;
+            animation: spin 1s linear infinite; margin-right: 10px;
+        }
+        #image-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 18px; }
+        .gallery-item {
+            border-radius: var(--border-radius); overflow: hidden; position: relative;
+            aspect-ratio: 1/1; animation: fadeIn 0.5s;
+        }
+        .gallery-item img { width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
+        .delete-btn {
+            position: absolute; top: 8px; left: 8px; background-color: rgba(255, 59, 48, 0.8);
+            color: white; border: none; border-radius: 50%; width: 28px; height: 28px;
+            cursor: pointer; display: flex; justify-content: center; align-items: center;
+            opacity: 0; transition: opacity var(--transition);
+        }
+        .gallery-item:hover .delete-btn { opacity: 1; }
+        .empty-message { text-align: center; padding: 40px; background: #fff; border-radius: var(--border-radius); grid-column: 1 / -1; }
+
+        /* --- Lightbox --- */
+        #lightbox {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); display: flex;
+            justify-content: center; align-items: center; z-index: 1000;
+            opacity: 0; pointer-events: none; transition: opacity var(--transition);
+        }
+        #lightbox.active { opacity: 1; pointer-events: all; }
+        #lightbox img { max-width: 90%; max-height: 90%; border-radius: 5px; }
+        .close-lightbox { position: fixed; top: 20px; right: 20px; font-size: 30px; color: white; cursor: pointer; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Folder View -->
+        <div id="folder-view" class="view active">
+            <header>
+                <h1>ئەلبومەکان</h1>
+                <p>ئەلبومێک هەڵبژێرە یان یەکێکی نوێ دروست بکە</p>
+            </header>
+            <div id="folder-controls">
+                <button class="btn btn-primary" id="new-folder-btn">
+                    <svg fill="currentColor" viewBox="0 0 20 20"><path d="M2 4a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1h4a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1V4zm10 2H3v8h14V6h-4a2 2 0 0 1-2-2zM9 4V3H4a1 1 0 0 0-1 1v1h6z"></path></svg>
+                    <span>دروستکردنی فۆڵدەری نوێ</span>
+                </button>
+            </div>
+            <div id="folder-grid"></div>
+        </div>
+
+        <!-- Image View -->
+        <div id="image-view" class="view">
+            <div id="image-view-header">
+                <button class="btn" id="back-to-folders-btn" style="background: #e5e5e5; color: #333;">&rarr; گەڕانەوە بۆ فۆڵدەرەکان</button>
+                <h2 id="current-folder-title"></h2>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <div id="loader"></div>
+                    <div class="upload-btn-wrapper">
+                        <button class="btn btn-primary">زیادکردنی وێنە</button>
+                        <input type="file" id="imageUpload" multiple accept="image/*" />
+                    </div>
+                </div>
+            </div>
+            <div id="image-gallery"></div>
+        </div>
+    </div>
+
+    <!-- Lightbox -->
+    <div id="lightbox"><span class="close-lightbox">&times;</span><img src=""></div>
+
+    <script>
+        const DB_NAME = 'AlbumGalleryDB';
+        const FOLDER_STORE = 'folders';
+        const IMAGE_STORE = 'images';
+        let db;
+        let currentFolderId = null;
+
+        // DOM Elements
+        const folderView = document.getElementById('folder-view');
+        const imageView = document.getElementById('image-view');
+        const folderGrid = document.getElementById('folder-grid');
+        const imageGallery = document.getElementById('image-gallery');
+        const newFolderBtn = document.getElementById('new-folder-btn');
+        const backToFoldersBtn = document.getElementById('back-to-folders-btn');
+        const imageUpload = document.getElementById('imageUpload');
+        const loader = document.getElementById('loader');
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImg = lightbox.querySelector('img');
+        const currentFolderTitle = document.getElementById('current-folder-title');
+
+        // --- Database Initialization ---
+        function initDB() {
+            const request = indexedDB.open(DB_NAME, 1);
+            request.onerror = e => console.error("DB Error:", e.target.error);
+            request.onupgradeneeded = e => {
+                db = e.target.result;
+                db.createObjectStore(FOLDER_STORE, { keyPath: 'id', autoIncrement: true });
+                const imageStore = db.createObjectStore(IMAGE_STORE, { keyPath: 'id', autoIncrement: true });
+                imageStore.createIndex('folderId_idx', 'folderId', { unique: false });
+            };
+            request.onsuccess = e => {
+                db = e.target.result;
+                renderFolders();
+            };
+        }
+
+        // --- View Management ---
+        function showView(viewToShow) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            viewToShow.classList.add('active');
+        }
+
+        // --- Folder Logic ---
+        async function renderFolders() {
+            const store = db.transaction(FOLDER_STORE, 'readonly').objectStore(FOLDER_STORE);
+            const folders = await new Promise(resolve => store.getAll().onsuccess = e => resolve(e.target.result));
+            
+            folderGrid.innerHTML = '';
+            if (folders.length === 0) {
+                folderGrid.innerHTML = `<p class="empty-message">هیچ فۆڵدەرێک نییە. یەکێک دروست بکە!</p>`;
+                return;
+            }
+
+            for (const folder of folders) {
+                const imgCount = await countImagesInFolder(folder.id);
+                const folderEl = document.createElement('div');
+                folderEl.className = 'folder-item';
+                folderEl.innerHTML = `
+                    <button class="delete-folder-btn">&times;</button>
+                    <div class="folder-icon">📁</div>
+                    <div class="folder-name">${folder.name}</div>
+                    <div class="folder-count">${imgCount} وێنە</div>
+                `;
+                folderEl.onclick = () => openFolder(folder.id, folder.name);
+                folderEl.querySelector('.delete-folder-btn').onclick = (e) => {
+                    e.stopPropagation();
+                    if (confirm(`دڵنیایت دەتەوێت فۆڵدەری "${folder.name}" و هەموو وێنەکانی بسڕیتەوە؟`)) {
+                        deleteFolder(folder.id);
+                    }
+                };
+                folderGrid.appendChild(folderEl);
+            }
+        }
+
+        function countImagesInFolder(folderId) {
+            const store = db.transaction(IMAGE_STORE, 'readonly').objectStore(IMAGE_STORE);
+            const index = store.index('folderId_idx');
+            return new Promise(resolve => index.count(folderId).onsuccess = e => resolve(e.target.result));
+        }
+
+        newFolderBtn.onclick = () => {
+            const name = prompt("ناوی فۆڵدەرە نوێیەکە بنووسە:");
+            if (name && name.trim()) {
+                const store = db.transaction(FOLDER_STORE, 'readwrite').objectStore(FOLDER_STORE);
+                store.add({ name: name.trim() });
+                store.transaction.oncomplete = () => renderFolders();
+            }
+        };
+
+        function deleteFolder(folderId) {
+            const imgTx = db.transaction(IMAGE_STORE, 'readwrite');
+            const imgStore = imgTx.objectStore(IMAGE_STORE);
+            const index = imgStore.index('folderId_idx');
+            
+            index.openKeyCursor(IDBKeyRange.only(folderId)).onsuccess = e => {
+                const cursor = e.target.result;
+                if (cursor) {
+                    imgStore.delete(cursor.primaryKey);
+                    cursor.continue();
+                }
+            };
+
+            imgTx.oncomplete = () => {
+                const folderTx = db.transaction(FOLDER_STORE, 'readwrite');
+                folderTx.objectStore(FOLDER_STORE).delete(folderId);
+                folderTx.oncomplete = () => renderFolders();
+            };
+        }
+
+        // --- Image Logic ---
+        function openFolder(folderId, folderName) {
+            currentFolderId = folderId;
+            currentFolderTitle.textContent = folderName;
+            showView(imageView);
+            renderImagesForFolder(folderId);
+        }
+
+        function renderImagesForFolder(folderId) {
+            const store = db.transaction(IMAGE_STORE, 'readonly').objectStore(IMAGE_STORE);
+            const index = store.index('folderId_idx');
+            
+            imageGallery.innerHTML = '';
+            index.getAll(folderId).onsuccess = e => {
+                const images = e.target.result;
+                if (images.length === 0) {
+                    imageGallery.innerHTML = `<p class="empty-message">هیچ وێنەیەک لەم فۆڵدەرەدا نییە.</p>`;
+                    return;
+                }
+                images.forEach(img => {
+                    const item = document.createElement('div');
+                    item.className = 'gallery-item';
+                    item.innerHTML = `
+                        <img src="${img.data}" alt="Gallery Image">
+                        <button class="delete-btn">&times;</button>
+                    `;
+                    item.querySelector('img').onclick = () => openLightbox(img.data);
+                    item.querySelector('.delete-btn').onclick = (e) => {
+                        e.stopPropagation();
+                        if (confirm('دڵنیایت لە سڕینەوەی ئەم وێنەیە؟')) {
+                            deleteImage(img.id);
+                        }
+                    };
+                    imageGallery.appendChild(item);
+                });
+            };
+        }
+
+        imageUpload.onchange = e => {
+            if (!currentFolderId || e.target.files.length === 0) return;
+            
+            loader.style.display = 'block';
+            const files = Array.from(e.target.files);
+            const promises = files.map(file => new Promise(resolve => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.readAsDataURL(file);
+            }));
+
+            Promise.all(promises).then(urls => {
+                const store = db.transaction(IMAGE_STORE, 'readwrite').objectStore(IMAGE_STORE);
+                urls.forEach(url => store.add({ folderId: currentFolderId, data: url }));
+                store.transaction.oncomplete = () => {
+                    loader.style.display = 'none';
+                    renderImagesForFolder(currentFolderId);
+                    e.target.value = ''; // Reset input
+                };
+            });
+        };
+
+        function deleteImage(imageId) {
+            const store = db.transaction(IMAGE_STORE, 'readwrite').objectStore(IMAGE_STORE);
+            store.delete(imageId);
+            store.transaction.oncomplete = () => renderImagesForFolder(currentFolderId);
+        }
+
+        // --- Lightbox Logic ---
+        function openLightbox(src) {
+            lightboxImg.src = src;
+            lightbox.classList.add('active');
+        }
+        lightbox.onclick = e => {
+            if (e.target !== lightboxImg) lightbox.classList.remove('active');
+        };
+
+        // --- Initial Setup ---
+        backToFoldersBtn.onclick = () => {
+            currentFolderId = null;
+            renderFolders();
+            showView(folderView);
+        };
+        
+        initDB();
+    </script>
+</body>
+</html>
